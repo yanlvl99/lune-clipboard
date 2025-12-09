@@ -10,10 +10,9 @@ type ClipboardModule = {
     paste: () -> ()
 }
 
-local os_str = process.os
 local Clipboard: ClipboardModule = {} :: ClipboardModule
 
-if os_str == "windows" then
+if process.os == "windows" then
     local user32 = ffi.open("user32.dll")
     local kernel32 = ffi.open("kernel32.dll")
     
@@ -98,14 +97,14 @@ if os_str == "windows" then
         user32:call("keybd_event", "void", {"i32", "i32", "i32", "u64"}, VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
     end
 
-elseif os_str == "linux" then
+elseif process.os == "linux" then
     function Clipboard.set(text: string): boolean
-        local result = process.spawn("xclip", {"-selection", "clipboard", "-in"}, { stdio = "piped", input = text })
+        local result = process.exec("sh", {"-c", string.format("printf %%s '%s' | xclip -selection clipboard", text)})
         return result.ok
     end
 
     function Clipboard.get(): string
-        local result = process.spawn("xclip", {"-selection", "clipboard", "-out"})
+        local result = process.exec("xclip", {"-selection", "clipboard", "-out"})
         return result.stdout
     end
 
@@ -114,17 +113,17 @@ elseif os_str == "linux" then
     end
 
     function Clipboard.paste()
-        process.spawn("xdotool", {"key", "ctrl+v"})
+        process.exec("xdotool", {"key", "ctrl+v"})
     end
 
-elseif os_str == "macos" then
+elseif process.os == "macos" then
     function Clipboard.set(text: string): boolean
-        local result = process.spawn("pbcopy", {}, { stdio = "piped", input = text })
+        local result = process.exec("sh", {"-c", string.format("printf %%s '%s' | pbcopy", text)})
         return result.ok
     end
 
     function Clipboard.get(): string
-        local result = process.spawn("pbpaste", {})
+        local result = process.exec("pbpaste", {})
         return result.stdout
     end
 
@@ -133,7 +132,7 @@ elseif os_str == "macos" then
     end
 
     function Clipboard.paste()
-        process.spawn("osascript", {"-e", 'tell application "System Events" to keystroke "v" using command down'})
+        process.exec("osascript", {"-e", 'tell application "System Events" to keystroke "v" using command down'})
     end
 end
 
